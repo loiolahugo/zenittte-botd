@@ -180,7 +180,7 @@ zenittte-bot/
 ### Passo 1 — Criar conta Oracle Cloud
 
 1. Acesse [cloud.oracle.com](https://cloud.oracle.com) e crie uma conta gratuita
-2. Ative o **Always Free** tier (não precisa de cartão de crédito para os recursos gratuitos)
+2. Ative o **Always Free** tier
 
 ---
 
@@ -191,68 +191,37 @@ zenittte-bot/
    - **Shape:** Ampere A1 (ARM, Always Free) ou VM.Standard.E2.1.Micro
    - **OS:** Ubuntu 22.04
    - **SSH Keys:** gere ou importe sua chave — **baixe o arquivo `.key` gerado**
-3. Clique em **Create** e aguarde a VM ficar com status *Running*
+3. Clique em **Create** e aguarde o status *Running*
 4. Anote o **IP Público** da instância
 
 ---
 
-### Passo 3 — Liberar porta 3000 no firewall
-
-**No painel Oracle:**
-1. Acesse **Networking > Virtual Cloud Networks** > sua VCN
-2. Clique em **Security Lists > Default Security List**
-3. Adicione uma **Ingress Rule**:
-   - Protocol: TCP | Source: `0.0.0.0/0` | Destination Port: `3000`
-
-**No Ubuntu (via SSH):**
-```bash
-sudo iptables -I INPUT -p tcp --dport 3000 -j ACCEPT
-```
-
----
-
-### Passo 4 — Conectar via SSH
+### Passo 3 — Conectar via SSH e rodar o setup
 
 ```bash
 ssh -i chave.key ubuntu@SEU_IP
-```
-
----
-
-### Passo 5 — Rodar o script de setup
-
-```bash
 bash scripts/setup-oracle.sh
 ```
 
+> O script remove versões antigas do Node.js, instala a 20, instala o PM2 e configura o auto-start.
+
 ---
 
-### Passo 6 — Clonar o repo e configurar
+### Passo 4 — Clonar o repo e configurar o .env
 
 ```bash
 git clone <seu-repositorio>
 cd zenittte-bot
 npm install
 cp .env.example .env
-nano .env  # preencha todas as variáveis
+nano .env  # preencha as credenciais do Discord e Twitch
 ```
 
-No `.env`, defina:
-```
-REDIRECT_URI=http://SEU_IP:3000/callback
-```
+**Não precisa definir `REDIRECT_URI`** — deixe vazio, o padrão `localhost:3000` já funciona.
 
 ---
 
-### Passo 7 — Atualizar Redirect URI na Twitch
-
-1. Acesse [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps) > seu app > **Manage**
-2. Em **OAuth Redirect URLs**, adicione: `http://SEU_IP:3000/callback`
-3. Salve
-
----
-
-### Passo 8 — Registrar os comandos slash
+### Passo 5 — Registrar os comandos slash
 
 ```bash
 node src/deploy-commands.js
@@ -260,7 +229,7 @@ node src/deploy-commands.js
 
 ---
 
-### Passo 9 — Iniciar com PM2
+### Passo 6 — Iniciar com PM2
 
 ```bash
 pm2 start ecosystem.config.cjs
@@ -269,27 +238,23 @@ pm2 save
 
 ---
 
-### Passo 10 — Autenticar a Twitch (uma única vez)
+### Passo 7 — Autenticar a Twitch via SSH tunnel (uma única vez)
 
-**Zenittte acessa no navegador:**
-```
-http://SEU_IP:3000/auth
-```
+A Twitch não aceita `http://` em IPs públicos — só em `localhost`. A solução é usar um **túnel SSH**: você redireciona a porta 3000 do servidor para o seu computador, e a Twitch enxerga `http://localhost:3000/callback` normalmente.
 
-Ele autoriza o app na Twitch e os tokens são salvos automaticamente. Após isso, o bot renova o token sozinho — **nunca mais precisa repetir esse passo**.
-
----
-
-### Passo 11 — Fechar porta 3000 (segurança)
-
-Após a autenticação, feche a porta para não deixá-la exposta:
-
-**No painel Oracle:** remova a Ingress Rule da porta 3000
-
-**No Ubuntu:**
+**No seu computador local** (novo terminal, não feche o SSH):
 ```bash
-sudo iptables -D INPUT -p tcp --dport 3000 -j ACCEPT
+ssh -L 3000:localhost:3000 -i chave.key ubuntu@SEU_IP
 ```
+
+Com o túnel aberto, **zenittte acessa no navegador local:**
+```
+http://localhost:3000/auth
+```
+
+Ele autoriza na Twitch, os tokens são salvos no servidor automaticamente. O bot renova o token sozinho após isso — **nunca mais precisa repetir**.
+
+> O Redirect URI no console da Twitch continua sendo `http://localhost:3000/callback` — sem precisar mudar nada.
 
 ---
 
