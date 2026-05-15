@@ -32,7 +32,8 @@ export async function analyzePrediction(game, predictionTitle, outcomes) {
       `${GEMINI_URL}?key=${apiKey}`,
       {
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 1024 },
+        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+        thinkingConfig: { thinkingBudget: 0 },
       }
     );
 
