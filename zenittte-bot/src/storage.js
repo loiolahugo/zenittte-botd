@@ -32,8 +32,6 @@ function save(data) {
   writeFileSync(DATA_PATH, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// ── Roles ────────────────────────────────────────────────────────────────────
-
 export function setRole(funcao, roleId) {
   const data = load();
   data.roles[funcao] = roleId;
@@ -44,8 +42,6 @@ export function getRoles() {
   return load().roles;
 }
 
-// ── Canal de notificação ─────────────────────────────────────────────────────
-
 export function setNotificationChannel(channelId) {
   const data = load();
   data.notificationChannelId = channelId;
@@ -55,8 +51,6 @@ export function setNotificationChannel(channelId) {
 export function getNotificationChannelId() {
   return load().notificationChannelId;
 }
-
-// ── Predictions vistas ────────────────────────────────────────────────────────
 
 export function isPredictionSeen(predictionId) {
   return load().seenPredictions.includes(predictionId);
@@ -73,7 +67,6 @@ export function markPredictionSeen(predictionId) {
   }
 }
 
-// ── Tokens OAuth Twitch ───────────────────────────────────────────────────────
 
 export function saveTokens(accessToken, refreshToken) {
   const data = load();
@@ -84,8 +77,6 @@ export function saveTokens(accessToken, refreshToken) {
 export function getTokens() {
   return load().tokens;
 }
-
-// ── Config completa (para /designarcargo ver) ─────────────────────────────────
 
 export function getFullConfig() {
   const { roles, notificationChannelId } = load();

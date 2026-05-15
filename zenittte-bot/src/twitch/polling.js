@@ -2,22 +2,21 @@ import axios from 'axios';
 import { getValidToken } from './auth.js';
 import { isPredictionSeen, markPredictionSeen } from '../storage.js';
 import { sendPredictionNotification } from '../discord/notifier.js';
+import { analyzePrediction } from '../ai/analyzer.js';
 import { config } from 'dotenv';
 
 config();
 
 const CLIENT_ID      = process.env.TWITCH_CLIENT_ID;
 const CHANNEL_NAME   = process.env.TWITCH_CHANNEL_NAME;
-const POLL_INTERVAL  = 10_000; // 10 segundos
-const RETRY_INTERVAL = 30_000; // retry de auth a cada 30s
-
-// ── Helpers Twitch API ────────────────────────────────────────────────────────
+const POLL_INTERVAL  = 10_000;
+const RETRY_INTERVAL = 30_000;
 
 async function getBroadcasterId(token) {
   const res = await axios.get('https://api.twitch.tv/helix/users', {
     params: { login: CHANNEL_NAME },
     headers: {
-      'Client-Id':    CLIENT_ID,
+      'Client-Id':     CLIENT_ID,
       'Authorization': `Bearer ${token}`,
     },
   });
@@ -28,29 +27,49 @@ async function fetchLatestPrediction(token, broadcasterId) {
   const res = await axios.get('https://api.twitch.tv/helix/predictions', {
     params: { broadcaster_id: broadcasterId, first: 1 },
     headers: {
-      'Client-Id':    CLIENT_ID,
+      'Client-Id':     CLIENT_ID,
       'Authorization': `Bearer ${token}`,
     },
   });
   return res.data.data[0] ?? null;
 }
 
-// ── Loop principal ────────────────────────────────────────────────────────────
+async function fetchCurrentGame(token, broadcasterId) {
+  try {
+    const res = await axios.get('https://api.twitch.tv/helix/channels', {
+      params: { broadcaster_id: broadcasterId },
+      headers: {
+        'Client-Id':     CLIENT_ID,
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    return res.data.data[0]?.game_name || 'jogo desconhecido';
+  } catch {
+    return 'jogo desconhecido';
+  }
+}
 
 async function checkPredictions(client, broadcasterId) {
   const token = await getValidToken();
-  if (!token) return; // sem token, espera próxima iteração
+  if (!token) return;
 
   try {
     const prediction = await fetchLatestPrediction(token, broadcasterId);
+    if (!prediction) return;
 
-    if (!prediction) return; // nenhuma prediction no canal ainda
-
-    // Só notifica se: está ATIVA e ainda não foi vista
     if (prediction.status === 'ACTIVE' && !isPredictionSeen(prediction.id)) {
       markPredictionSeen(prediction.id);
       console.log(`🎯 [Twitch] Nova prediction detectada: "${prediction.title}"`);
-      await sendPredictionNotification(client, prediction);
+
+      const game = await fetchCurrentGame(token, broadcasterId);
+      console.log(`🎮 [Twitch] Jogo atual: ${game}`);
+
+      const analysis = await analyzePrediction(game, prediction.title, prediction.outcomes ?? []);
+      if (analysis) {
+        console.log(`🤖 [AI] Favorita: "${analysis.favorita}" | Azarão: "${analysis.azarao}"`);
+      }
+
+      await sendPredictionNotification(client, prediction, analysis);
     }
   } catch (err) {
     if (err.response?.status === 401) {
@@ -60,8 +79,6 @@ async function checkPredictions(client, broadcasterId) {
     }
   }
 }
-
-// ── Entry point ───────────────────────────────────────────────────────────────
 
 export async function startPolling(client) {
   const token = await getValidToken();
@@ -80,9 +97,6 @@ export async function startPolling(client) {
 
   console.log(`✅ [Polling] Monitorando predictions de "${CHANNEL_NAME}" a cada ${POLL_INTERVAL / 1000}s`);
 
-  // Checa imediatamente ao iniciar
   await checkPredictions(client, broadcasterId);
-
-  // Inicia loop
   setInterval(() => checkPredictions(client, broadcasterId), POLL_INTERVAL);
 }

@@ -10,12 +10,9 @@ const CLIENT_SECRET = process.env.TWITCH_CLIENT_SECRET;
 const REDIRECT_URI  = process.env.REDIRECT_URI ?? 'http://localhost:3000/callback';
 const SCOPES        = 'channel:read:predictions';
 
-// ── Servidor OAuth local ──────────────────────────────────────────────────────
-
 export function startAuthServer() {
   const app = express();
 
-  // Passo 1: redireciona para a Twitch pedir autorização
   app.get('/auth', (_req, res) => {
     const url =
       `https://id.twitch.tv/oauth2/authorize` +
@@ -26,7 +23,6 @@ export function startAuthServer() {
     res.redirect(url);
   });
 
-  // Passo 2: Twitch redireciona aqui com o código
   app.get('/callback', async (req, res) => {
     const code = req.query.code;
     if (!code) {
@@ -73,8 +69,6 @@ export function startAuthServer() {
   });
 }
 
-// ── Helpers de token ──────────────────────────────────────────────────────────
-
 async function refreshAccessToken() {
   const { refreshToken } = getTokens();
   if (!refreshToken) {
@@ -96,10 +90,6 @@ async function refreshAccessToken() {
   return access_token;
 }
 
-/**
- * Retorna um token válido, renovando automaticamente se necessário.
- * Retorna null se o usuário ainda não autenticou.
- */
 export async function getValidToken() {
   const { accessToken } = getTokens();
 
@@ -108,14 +98,12 @@ export async function getValidToken() {
     return null;
   }
 
-  // Valida o token atual
   try {
     await axios.get('https://id.twitch.tv/oauth2/validate', {
       headers: { Authorization: `OAuth ${accessToken}` },
     });
     return accessToken;
   } catch {
-    // Token expirado — tenta renovar com o refresh token
     try {
       return await refreshAccessToken();
     } catch (err) {

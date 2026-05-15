@@ -6,13 +6,9 @@ import * as designarcargo from './commands/designarcargo.js';
 
 config();
 
-// ── Discord Client ────────────────────────────────────────────────────────────
-
 const client = new Client({
   intents: [GatewayIntentBits.Guilds],
 });
-
-// ── Carrega comandos ──────────────────────────────────────────────────────────
 
 client.commands = new Collection();
 
@@ -20,8 +16,6 @@ const comandos = [designarcargo];
 for (const cmd of comandos) {
   client.commands.set(cmd.data.name, cmd);
 }
-
-// ── Eventos do bot ────────────────────────────────────────────────────────────
 
 client.once('ready', async () => {
   console.log(`✅ [Discord] Bot online como ${client.user.tag}`);
@@ -48,8 +42,6 @@ client.on('interactionCreate', async (interaction) => {
     }
   }
 });
-
-// ── Inicia tudo ───────────────────────────────────────────────────────────────
 
 startAuthServer();
 client.login(process.env.DISCORD_TOKEN);

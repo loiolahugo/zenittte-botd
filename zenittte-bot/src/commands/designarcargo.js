@@ -1,13 +1,10 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
 import { setRole, setNotificationChannel, getFullConfig } from '../storage.js';
 
-// ── Definição do comando ──────────────────────────────────────────────────────
-
 export const data = new SlashCommandBuilder()
   .setName('designarcargo')
   .setDescription('Configura os cargos e canal para notificações de predictions da Twitch')
 
-  // Subcomando: definir cargo por função
   .addSubcommand(sub =>
     sub
       .setName('cargo')
@@ -36,7 +33,6 @@ export const data = new SlashCommandBuilder()
       )
   )
 
-  // Subcomando: definir canal de notificação
   .addSubcommand(sub =>
     sub
       .setName('canal')
@@ -50,22 +46,18 @@ export const data = new SlashCommandBuilder()
       )
   )
 
-  // Subcomando: ver configuração atual
   .addSubcommand(sub =>
     sub
       .setName('ver')
       .setDescription('Mostra a configuração atual de cargos e canal')
   )
 
-  // Só quem pode gerenciar o servidor usa esse comando
   .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild);
 
-// ── Handler ───────────────────────────────────────────────────────────────────
 
 export async function execute(interaction) {
   const sub = interaction.options.getSubcommand();
 
-  // ── /designarcargo cargo ──────────────────────────────────────────────────
   if (sub === 'cargo') {
     const funcao = interaction.options.getString('função');
     const role   = interaction.options.getRole('cargo');
@@ -84,7 +76,6 @@ export async function execute(interaction) {
     return;
   }
 
-  // ── /designarcargo canal ──────────────────────────────────────────────────
   if (sub === 'canal') {
     const canal = interaction.options.getChannel('canal');
 
@@ -97,7 +88,6 @@ export async function execute(interaction) {
     return;
   }
 
-  // ── /designarcargo ver ────────────────────────────────────────────────────
   if (sub === 'ver') {
     const { roles, notificationChannelId } = getFullConfig();
 
