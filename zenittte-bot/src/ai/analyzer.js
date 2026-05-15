@@ -38,10 +38,18 @@ export async function analyzePrediction(game, predictionTitle, outcomes) {
 
     const raw = response.data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
     const match = raw.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error('Nenhum JSON encontrado na resposta da IA');
-    return JSON.parse(match[0]);
+    if (!match) {
+      console.error('❌ [AI] Nenhum JSON encontrado na resposta. Resposta completa:\n', raw);
+      return null;
+    }
+    try {
+      return JSON.parse(match[0]);
+    } catch (parseErr) {
+      console.error('❌ [AI] JSON inválido. Resposta completa:\n', raw);
+      return null;
+    }
   } catch (err) {
-    console.error('❌ [AI] Erro ao analisar prediction:', err.response?.data ?? err.message);
+    console.error('❌ [AI] Erro ao chamar Gemini:', err.response?.data ?? err.message);
     return null;
   }
 }
